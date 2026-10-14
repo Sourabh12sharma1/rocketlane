@@ -63,3 +63,68 @@ describe("rocketlane home", () => {
     expect(after).not.toBe(before);
   });
 });
+
+describe("plan signup", () => {
+  it("opens the Starter dialog from the hero CTA and closes it", async () => {
+    const { container } = render(<Home />);
+    const open = () =>
+      [...container.querySelectorAll("button")].find(
+        (b) => b.textContent === "Start with one search",
+      )!;
+
+    expect(container.textContent).not.toContain("Start Starter");
+    act(() => open().click());
+    expect(container.textContent).toContain("Start Starter");
+    expect(container.textContent).toContain("$0/mo");
+    expect(container.querySelector('input[type="email"]')).toBeTruthy();
+
+    act(() => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent === "Cancel")!
+        .click();
+    });
+    expect(container.textContent).not.toContain("Start Starter");
+  });
+
+  it("opens the Pro dialog from its pricing card", () => {
+    const { container } = render(<Home />);
+    act(() => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent === "Start Pro")!
+        .click();
+    });
+    expect(container.textContent).toContain("Start Pro");
+    expect(container.textContent).toContain("$14/mo");
+    expect(container.textContent).toContain("Unlimited outreach credits");
+  });
+
+  it("captures the email and says plainly that nothing was sent", async () => {
+    const { container } = render(<Home />);
+    act(() => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent === "Start free")!
+        .click();
+    });
+
+    const input = container.querySelector('input[type="email"]') as HTMLInputElement;
+    act(() => {
+      // fire native change so React picks up the value
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!;
+      setter.call(input, "partner@example.com");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    await act(async () => {
+      [...container.querySelectorAll("button")]
+        .find((b) => b.textContent === "Continue")!
+        .click();
+    });
+
+    const text = container.textContent ?? "";
+    expect(text).toContain("You’re on the list.");
+    expect(text).toContain("partner@example.com");
+  });
+});

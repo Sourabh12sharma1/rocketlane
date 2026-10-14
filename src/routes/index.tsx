@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { MotionBackground } from "@/components/MotionBackground";
+import { PlanSignup, type PlanSummary } from "@/components/PlanSignup";
 
 const roles = [
   "Founding Engineer",
@@ -86,6 +87,7 @@ const problems = [
 
 export function Home() {
   const [i, setI] = useState(0);
+  const [plan, setPlan] = useState<PlanSummary | null>(null);
   useEffect(() => {
     const t = setInterval(() => setI((x) => (x + 1) % words.length), 2200);
     return () => clearInterval(t);
@@ -144,12 +146,13 @@ export function Home() {
               <b className="text-foreground">You keep the interviews.</b>
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <a
-                href="#plans"
+              <button
+                type="button"
+                onClick={() => setPlan({ name: "Starter", price: 0, credits: "50" })}
                 className="press rounded-xl border bg-primary px-7 py-4 font-semibold text-primary-foreground shadow-brutal"
               >
                 Start with one search
-              </a>
+              </button>
               <a
                 href="#how-it-works"
                 className="press rounded-xl border bg-card px-7 py-4 font-semibold shadow-brutal"
@@ -299,6 +302,8 @@ export function Home() {
                   ))}
                 </ul>
                 <button
+                  type="button"
+                  onClick={() => setPlan({ name: p.name, price: p.price, credits: p.credits })}
                   className={`press mt-8 w-full rounded-xl border py-3 font-semibold shadow-brutal ${
                     p.hot ? "bg-accent text-accent-foreground" : "bg-primary text-primary-foreground"
                   }`}
@@ -346,6 +351,8 @@ export function Home() {
           </a>
         </div>
       </section>
+
+      <PlanSignup plan={plan} onClose={() => setPlan(null)} />
 
       <footer className="border-t py-8 text-center text-sm text-muted-foreground">
         &copy; 2026 rocketlane &middot; an independent project
