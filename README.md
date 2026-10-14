@@ -1,8 +1,9 @@
 # Rocketlane
 
-Marketing homepage, rebuilt from Aarivi's shipped front end with a new name.
+A landing page for a job-search product. Design system rebuilt from a
+reference front end; all copy written fresh for this project.
 
-Vite + React 19 + Tailwind v4. Single page, no runtime dependencies beyond React.
+Vite + React 19 + Tailwind v4. One page, no runtime dependencies beyond React.
 
 ## Run it
 
@@ -11,19 +12,19 @@ npm install
 npm run dev
 ```
 
-## Deploy to Vercel
+## Deploy
 
-`vercel.json` is already configured for Vite (build `npm run build`, output `dist`).
+`vercel.json` is set for Vite (build `npm run build`, output `dist`). Push to
+GitHub and import at [vercel.com/new](https://vercel.com/new), or run
+`npx vercel` here.
 
-Either push to GitHub and import the repo at [vercel.com/new](https://vercel.com/new),
-or run `npx vercel` in this directory.
+## Status
 
-## What's real
+Front end only. The buttons don't submit anywhere, the board is static content,
+and the numbers on the page are illustrative. What's built is the layout, the
+motion system, and the responsive behaviour.
 
-The design system — oklch palette, Space Grotesk / DM Sans, brutalist shadows,
-motion background, bento grid, marquee — came out of Aarivi's shipped bundles.
-The pricing ($5/$8 monthly, 500/1,500 AI credits) is their real catalog, not invented.
+## Tests
 
-What is NOT real: there is no job data, no Gmail integration, no billing, and no
-auth behind the CTAs. The "12 founders emailed today" counter and the 739-interview
-stat are decorative. Everything here is a shell.
+`npm test` — 4 tests: sections present, pricing correct, a guard asserting no
+copy from the reference site survives, and the headline rotation.
