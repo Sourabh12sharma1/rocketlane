@@ -1,30 +1,41 @@
 # Rocketlane
 
-A landing page for a job-search product. Design system rebuilt from a
-reference front end; all copy written fresh for this project.
+Job-search landing page plus a resume builder under `/app` (auth, templates, import, PDF export).
 
-Vite + React 19 + Tailwind v4. One page, no runtime dependencies beyond React.
+Stack: Vite + React 19 + Tailwind v4 (UI), FastAPI + PostgreSQL (API). The dev server proxies `/api` to the backend on port 8000.
 
-## Run it
+## Run locally (two terminals)
+
+### Terminal 1 — API + database
+
+```bash
+cd backend
+docker compose up -d          # Postgres (default port 5432 in compose)
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env          # edit DATABASE_URL if you use local Postgres on another port (e.g. 5433)
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
+```
+
+See [backend/README.md](backend/README.md) for backend-only details.
+
+### Terminal 2 — UI
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Deploy
-
-`vercel.json` is set for Vite (build `npm run build`, output `dist`). Push to
-GitHub and import at [vercel.com/new](https://vercel.com/new), or run
-`npx vercel` here.
-
-## Status
-
-Front end only. The buttons don't submit anywhere, the board is static content,
-and the numbers on the page are illustrative. What's built is the layout, the
-motion system, and the responsive behaviour.
+Open [http://localhost:5173](http://localhost:5173). Sign up at `/app/signup`, then build or import a resume at `/app/resume`.
 
 ## Tests
 
-`npm test` — 4 tests: sections present, pricing correct, a guard asserting no
-copy from the reference site survives, and the headline rotation.
+```bash
+npm test
+cd backend && PYTHONPATH=. pytest
+```
+
+## Deploy (landing only)
+
+`vercel.json` targets the static Vite build (`npm run build`, output `dist`). The resume app expects the API wherever you host it, with CORS configured.

@@ -14,6 +14,7 @@ export function ResumeEditor() {
   const [templateId, setTemplateId] = useState<TemplateId>("classic");
   const [content, setContent] = useState<ResumeContent>(emptyContent());
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
@@ -75,6 +76,30 @@ export function ResumeEditor() {
     }
   }, [id, title, templateId, content]);
 
+  const downloadPdf = useCallback(async () => {
+    if (!id) return;
+    setExporting(true);
+    setError("");
+    try {
+      const res = await apiFetch(`/resumes/${id}/export.pdf`);
+      if (!res.ok) {
+        setError("Could not export PDF.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "resume.pdf";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Could not export PDF.");
+    } finally {
+      setExporting(false);
+    }
+  }, [id]);
+
   if (loading) {
     return <p className="text-muted-foreground">Loading…</p>;
   }
@@ -99,14 +124,24 @@ export function ResumeEditor() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => void save()}
-          className="press rounded-xl border bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-brutal disabled:opacity-60"
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={exporting}
+            onClick={() => void downloadPdf()}
+            className="press rounded-xl border bg-card px-6 py-3 font-semibold shadow-brutal disabled:opacity-60"
+          >
+            {exporting ? "Preparing…" : "Download PDF"}
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void save()}
+            className="press rounded-xl border bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-brutal disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
       {saveMessage && <p className="mt-2 text-sm font-medium text-primary">{saveMessage}</p>}
       {error && (

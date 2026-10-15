@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { MotionBackground } from "@/components/MotionBackground";
 import { PlanSignup, type PlanSummary } from "@/components/PlanSignup";
+import { useAuth } from "@/lib/auth";
 
 const roles = [
   "Founding Engineer",
@@ -86,6 +88,8 @@ const problems = [
 ];
 
 export function Home() {
+  const { token } = useAuth();
+  const appResumePath = token ? "/app/resume" : "/app/signup";
   const [i, setI] = useState(0);
   const [plan, setPlan] = useState<PlanSummary | null>(null);
   useEffect(() => {
@@ -153,6 +157,12 @@ export function Home() {
               >
                 Start with one search
               </button>
+              <Link
+                to={appResumePath}
+                className="press rounded-xl border bg-accent px-7 py-4 font-semibold shadow-brutal"
+              >
+                Build resume
+              </Link>
               <a
                 href="#how-it-works"
                 className="press rounded-xl border bg-card px-7 py-4 font-semibold shadow-brutal"
@@ -241,6 +251,12 @@ export function Home() {
               Drop in a resume and a repo. You get a live page with an assistant trained on your
               own work &mdash; no template to fight, nothing to deploy.
             </p>
+            <Link
+              to={appResumePath}
+              className="press mt-6 inline-block rounded-xl border bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-brutal"
+            >
+              Build resume
+            </Link>
           </div>
           <div className="flex flex-col justify-between rounded-2xl border bg-accent p-8 shadow-brutal">
             <span className="font-display text-6xl font-semibold tracking-tight">2,400</span>
@@ -343,12 +359,12 @@ export function Home() {
           <p className="mx-auto mt-4 max-w-md font-medium opacity-80">
             Free plan, no card. If it doesn't find anything worth applying to, close the tab.
           </p>
-          <a
-            href="#plans"
+          <Link
+            to={appResumePath}
             className="press mt-8 inline-block rounded-xl border bg-primary px-8 py-4 font-semibold text-primary-foreground shadow-brutal"
           >
-            Create a free account
-          </a>
+            {token ? "Open your resumes" : "Create a free account"}
+          </Link>
         </div>
       </section>
 

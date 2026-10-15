@@ -1,10 +1,27 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { TOKEN_KEY } from "@/lib/api";
+import { AuthProvider } from "@/lib/auth";
 import { Home } from "@/routes/index";
 
+function renderHome() {
+  return render(
+    <MemoryRouter>
+      <AuthProvider>
+        <Home />
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
 describe("rocketlane home", () => {
+  beforeEach(() => {
+    localStorage.removeItem(TOKEN_KEY);
+  });
+
   it("renders the brand and every section", () => {
-    const { container } = render(<Home />);
+    const { container } = renderHome();
     const text = container.textContent ?? "";
 
     expect(text).toContain("rocketlane");
@@ -20,7 +37,7 @@ describe("rocketlane home", () => {
   });
 
   it("uses the new pricing, not the source site's", () => {
-    const { container } = render(<Home />);
+    const { container } = renderHome();
     const text = container.textContent ?? "";
     expect(text).toContain("$0");
     expect(text).toContain("$14");
@@ -34,7 +51,7 @@ describe("rocketlane home", () => {
   });
 
   it("carries no copy from the source site", () => {
-    const { container } = render(<Home />);
+    const { container } = renderHome();
     const text = (container.textContent ?? "").toLowerCase();
     for (const lifted of [
       "aarivi",
@@ -51,9 +68,20 @@ describe("rocketlane home", () => {
     }
   });
 
+  it("links Build resume to signup when logged out", () => {
+    const { container } = renderHome();
+    const links = [...container.querySelectorAll("a")].filter(
+      (a) => a.textContent === "Build resume",
+    );
+    expect(links.length).toBeGreaterThanOrEqual(1);
+    for (const link of links) {
+      expect(link.getAttribute("href")).toBe("/app/signup");
+    }
+  });
+
   it("rotates the headline word over time", () => {
     vi.useFakeTimers();
-    const { container } = render(<Home />);
+    const { container } = renderHome();
     const before = container.querySelector("h1")?.textContent ?? "";
     act(() => {
       vi.advanceTimersByTime(2300);
@@ -66,7 +94,7 @@ describe("rocketlane home", () => {
 
 describe("plan signup", () => {
   it("opens the Starter dialog from the hero CTA and closes it", async () => {
-    const { container } = render(<Home />);
+    const { container } = renderHome();
     const open = () =>
       [...container.querySelectorAll("button")].find(
         (b) => b.textContent === "Start with one search",
@@ -87,7 +115,7 @@ describe("plan signup", () => {
   });
 
   it("opens the Pro dialog from its pricing card", () => {
-    const { container } = render(<Home />);
+    const { container } = renderHome();
     act(() => {
       [...container.querySelectorAll("button")]
         .find((b) => b.textContent === "Start Pro")!
@@ -99,7 +127,7 @@ describe("plan signup", () => {
   });
 
   it("captures the email and says plainly that nothing was sent", async () => {
-    const { container } = render(<Home />);
+    const { container } = renderHome();
     act(() => {
       [...container.querySelectorAll("button")]
         .find((b) => b.textContent === "Start free")!
