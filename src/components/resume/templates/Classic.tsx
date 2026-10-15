@@ -1,9 +1,12 @@
 import type { ResumeContent } from "@/lib/resumeTypes";
+import { ResumeBodySections } from "@/components/resume/ResumeBodySections";
+import { formatSkill } from "@/lib/skillUtils";
 
 type Props = { content: ResumeContent };
 
 export function ClassicTemplate({ content }: Props) {
   const { contact } = content;
+  const contactLinks = contact.links.filter((l) => l.label || l.url);
   return (
     <article className="space-y-4 text-sm leading-relaxed text-foreground">
       <header className="border-b pb-3 text-center">
@@ -11,44 +14,35 @@ export function ClassicTemplate({ content }: Props) {
         <p className="mt-1 text-muted-foreground">
           {[contact.email, contact.phone, contact.location].filter(Boolean).join(" · ")}
         </p>
-      </header>
-      {content.summary && (
-        <section>
-          <h2 className="mb-1 border-b text-xs font-bold uppercase tracking-wider">Summary</h2>
-          <p>{content.summary}</p>
-        </section>
-      )}
-      {content.experience.length > 0 && (
-        <section>
-          <h2 className="mb-2 border-b text-xs font-bold uppercase tracking-wider">Experience</h2>
-          <ul className="space-y-3">
-            {content.experience.map((exp, i) => (
-              <li key={i}>
-                <p className="font-semibold">
-                  {exp.title}
-                  {exp.company ? ` — ${exp.company}` : ""}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {[exp.start, exp.end].filter(Boolean).join(" – ")}
-                </p>
-                {exp.bullets.length > 0 && (
-                  <ul className="mt-1 list-disc pl-5">
-                    {exp.bullets.map((b, j) => (
-                      <li key={j}>{b}</li>
-                    ))}
-                  </ul>
+        {contactLinks.length > 0 && (
+          <p className="mt-1 text-muted-foreground">
+            {contactLinks.map((link, i) => (
+              <span key={i}>
+                {i > 0 ? " · " : ""}
+                {link.url ? (
+                  <a href={link.url} className="underline" target="_blank" rel="noreferrer">
+                    {link.label || link.url}
+                  </a>
+                ) : (
+                  link.label
                 )}
-              </li>
+              </span>
             ))}
-          </ul>
-        </section>
-      )}
-      {content.skills.length > 0 && (
-        <section>
-          <h2 className="mb-1 border-b text-xs font-bold uppercase tracking-wider">Skills</h2>
-          <p>{content.skills.join(", ")}</p>
-        </section>
-      )}
+          </p>
+        )}
+      </header>
+      <ResumeBodySections
+        content={content}
+        styles={{
+          sectionTitle: "mb-1 border-b text-xs font-bold uppercase tracking-wider",
+          skillInline: "mt-1",
+        }}
+        renderSkills={(c) =>
+          c.skills.length > 0 ? (
+            <p className="mt-1">{c.skills.map(formatSkill).join(", ")}</p>
+          ) : null
+        }
+      />
     </article>
   );
 }

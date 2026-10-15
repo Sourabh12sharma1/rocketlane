@@ -6,8 +6,10 @@ import type {
   ResumeEducation,
   ResumeExperience,
   ResumeLanguage,
+  ResumeLink,
   ResumeProject,
 } from "@/lib/resumeTypes";
+import { parseSkillsText, skillsToEditorText } from "@/lib/skillUtils";
 
 type Props = {
   content: ResumeContent;
@@ -33,6 +35,43 @@ export function ResumeForm({ content, onChange }: Props) {
 
   function patchContact(field: keyof ResumeContent["contact"], value: string) {
     onChange({ ...content, contact: { ...content.contact, [field]: value } });
+  }
+
+  function updateContactLink(index: number, link: ResumeLink) {
+    const links = [...content.contact.links];
+    links[index] = link;
+    onChange({ ...content, contact: { ...content.contact, links } });
+  }
+
+  function addContactLink() {
+    onChange({
+      ...content,
+      contact: { ...content.contact, links: [...content.contact.links, { label: "", url: "" }] },
+    });
+  }
+
+  function removeContactLink(index: number) {
+    onChange({
+      ...content,
+      contact: {
+        ...content.contact,
+        links: content.contact.links.filter((_, i) => i !== index),
+      },
+    });
+  }
+
+  function updateTopLink(index: number, link: ResumeLink) {
+    const links = [...content.links];
+    links[index] = link;
+    patch({ links });
+  }
+
+  function addTopLink() {
+    patch({ links: [...content.links, { label: "", url: "" }] });
+  }
+
+  function removeTopLink(index: number) {
+    patch({ links: content.links.filter((_, i) => i !== index) });
   }
 
   function updateExperience(index: number, exp: ResumeExperience) {
@@ -136,7 +175,7 @@ export function ResumeForm({ content, onChange }: Props) {
     patch({ custom: content.custom.filter((_, i) => i !== index) });
   }
 
-  const skillsText = content.skills.join(", ");
+  const skillsText = skillsToEditorText(content.skills);
 
   return (
     <div className="space-y-8">
@@ -186,6 +225,37 @@ export function ResumeForm({ content, onChange }: Props) {
             value={content.contact.location}
             onChange={(e) => patchContact("location", e.target.value)}
           />
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className={labelClass}>Contact links</span>
+            <button type="button" onClick={addContactLink} className="text-xs font-semibold underline">
+              Add link
+            </button>
+          </div>
+          {content.contact.links.map((link, i) => (
+            <div key={i} className="grid gap-2 sm:grid-cols-2">
+              <input
+                placeholder="Label"
+                className={inputClass}
+                value={link.label}
+                onChange={(e) => updateContactLink(i, { ...link, label: e.target.value })}
+              />
+              <input
+                placeholder="URL"
+                className={inputClass}
+                value={link.url}
+                onChange={(e) => updateContactLink(i, { ...link, url: e.target.value })}
+              />
+              <button
+                type="button"
+                onClick={() => removeContactLink(i)}
+                className="text-xs text-destructive sm:col-span-2"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -318,14 +388,7 @@ export function ResumeForm({ content, onChange }: Props) {
           rows={2}
           className={inputClass}
           value={skillsText}
-          onChange={(e) =>
-            patch({
-              skills: e.target.value
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean),
-            })
-          }
+          onChange={(e) => patch({ skills: parseSkillsText(e.target.value) })}
         />
       </section>
 
@@ -357,7 +420,47 @@ export function ResumeForm({ content, onChange }: Props) {
               value={proj.description}
               onChange={(e) => updateProject(i, { ...proj, description: e.target.value })}
             />
+            <textarea
+              placeholder="Bullets (one per line)"
+              rows={3}
+              className={inputClass}
+              value={proj.bullets.join("\n")}
+              onChange={(e) =>
+                updateProject(i, {
+                  ...proj,
+                  bullets: e.target.value.split("\n").filter((l) => l.length > 0),
+                })
+              }
+            />
             <button type="button" onClick={() => removeProject(i)} className="text-xs text-destructive">
+              Remove
+            </button>
+          </div>
+        ))}
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <SectionTitle>Links</SectionTitle>
+          <button type="button" onClick={addTopLink} className="text-xs font-semibold underline">
+            Add link
+          </button>
+        </div>
+        {content.links.map((link, i) => (
+          <div key={i} className="grid gap-2 rounded-xl border bg-muted/30 p-3 sm:grid-cols-2">
+            <input
+              placeholder="Label"
+              className={inputClass}
+              value={link.label}
+              onChange={(e) => updateTopLink(i, { ...link, label: e.target.value })}
+            />
+            <input
+              placeholder="URL"
+              className={inputClass}
+              value={link.url}
+              onChange={(e) => updateTopLink(i, { ...link, url: e.target.value })}
+            />
+            <button type="button" onClick={() => removeTopLink(i)} className="text-xs text-destructive sm:col-span-2">
               Remove
             </button>
           </div>

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import require_phone_verified
 from app.config import Settings, get_settings
 from app.db import get_db
 from app.models import Resume, User
@@ -22,6 +22,25 @@ from app.services.import_resume import import_from_inputs
 
 router = APIRouter()
 
+_READ_CHUNK = 64 * 1024
+
+
+async def _read_upload_bounded(file: UploadFile, max_bytes: int) -> bytes:
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(_READ_CHUNK)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="File too large",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
 
 def _get_owned_resume(db: Session, user: User, resume_id: uuid.UUID) -> Resume:
     resume = (
@@ -36,7 +55,7 @@ def _get_owned_resume(db: Session, user: User, resume_id: uuid.UUID) -> Resume:
 
 @router.get("", response_model=list[ResumeListItem])
 def list_resumes(
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_phone_verified),
     db: Session = Depends(get_db),
 ):
     rows = (
@@ -51,7 +70,7 @@ def list_resumes(
 @router.post("", response_model=ResumeOut, status_code=status.HTTP_201_CREATED)
 def create_resume(
     body: ResumeCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_phone_verified),
     db: Session = Depends(get_db),
 ):
     resume = Resume(
@@ -68,7 +87,7 @@ def create_resume(
 
 @router.post("/import", response_model=ResumeImportResponse)
 async def import_resume(
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_phone_verified),
     text: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
     settings: Settings = Depends(get_settings),
@@ -76,15 +95,10 @@ async def import_resume(
     has_text = text is not None and text.strip() != ""
     file_bytes: bytes | None = None
     if file is not None:
-        file_bytes = await file.read()
+        file_bytes = await _read_upload_bounded(file, settings.max_upload_bytes)
         if len(file_bytes) == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Empty file"
-            )
-        if len(file_bytes) > settings.max_upload_bytes:
-            raise HTTPException(
-                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                detail="File too large",
             )
     if not has_text and file_bytes is None:
         raise HTTPException(
@@ -98,7 +112,7 @@ async def import_resume(
 @router.get("/{resume_id}/export.pdf")
 def export_resume_pdf(
     resume_id: uuid.UUID,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_phone_verified),
     db: Session = Depends(get_db),
 ):
     resume = _get_owned_resume(db, user, resume_id)
@@ -113,7 +127,7 @@ def export_resume_pdf(
 @router.get("/{resume_id}", response_model=ResumeOut)
 def get_resume(
     resume_id: uuid.UUID,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_phone_verified),
     db: Session = Depends(get_db),
 ):
     resume = _get_owned_resume(db, user, resume_id)
@@ -124,7 +138,7 @@ def get_resume(
 def update_resume(
     resume_id: uuid.UUID,
     body: ResumeUpdate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_phone_verified),
     db: Session = Depends(get_db),
 ):
     resume = _get_owned_resume(db, user, resume_id)
@@ -143,7 +157,7 @@ def update_resume(
 @router.delete("/{resume_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_resume(
     resume_id: uuid.UUID,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_phone_verified),
     db: Session = Depends(get_db),
 ):
     resume = _get_owned_resume(db, user, resume_id)

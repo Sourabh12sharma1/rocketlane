@@ -1,9 +1,12 @@
 import type { ResumeContent } from "@/lib/resumeTypes";
+import { ResumeBodySections } from "@/components/resume/ResumeBodySections";
+import { formatSkill } from "@/lib/skillUtils";
 
 type Props = { content: ResumeContent };
 
 export function CompactTemplate({ content }: Props) {
   const { contact } = content;
+  const contactLinks = contact.links.filter((l) => l.label || l.url);
   return (
     <article className="space-y-2 text-[11px] leading-snug">
       <header>
@@ -11,43 +14,35 @@ export function CompactTemplate({ content }: Props) {
         <p className="text-muted-foreground">
           {[contact.email, contact.phone, contact.location].filter(Boolean).join(" | ")}
         </p>
-      </header>
-      {content.summary && (
-        <section>
-          <h2 className="font-bold uppercase">Summary</h2>
-          <p>{content.summary}</p>
-        </section>
-      )}
-      {content.experience.length > 0 && (
-        <section>
-          <h2 className="font-bold uppercase">Experience</h2>
-          {content.experience.map((exp, i) => (
-            <div key={i} className="mt-1">
-              <p>
-                <span className="font-semibold">{exp.title}</span>
-                {exp.company ? `, ${exp.company}` : ""}
-                {(exp.start || exp.end) && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    ({[exp.start, exp.end].filter(Boolean).join("–")})
-                  </span>
+        {contactLinks.length > 0 && (
+          <p className="text-muted-foreground">
+            {contactLinks.map((link, i) => (
+              <span key={i}>
+                {i > 0 ? " | " : ""}
+                {link.url ? (
+                  <a href={link.url} className="underline" target="_blank" rel="noreferrer">
+                    {link.label || link.url}
+                  </a>
+                ) : (
+                  link.label
                 )}
-              </p>
-              {exp.bullets.map((b, j) => (
-                <p key={j} className="pl-2 before:content-['•_']">
-                  {b}
-                </p>
-              ))}
-            </div>
-          ))}
-        </section>
-      )}
-      {content.skills.length > 0 && (
-        <section>
-          <h2 className="font-bold uppercase">Skills</h2>
-          <p>{content.skills.join(" · ")}</p>
-        </section>
-      )}
+              </span>
+            ))}
+          </p>
+        )}
+      </header>
+      <ResumeBodySections
+        content={content}
+        styles={{
+          sectionTitle: "font-bold uppercase",
+          skillInline: "mt-0.5",
+        }}
+        renderSkills={(c) =>
+          c.skills.length > 0 ? (
+            <p className="mt-0.5">{c.skills.map(formatSkill).join(" · ")}</p>
+          ) : null
+        }
+      />
     </article>
   );
 }

@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { TemplatePicker } from "@/components/resume/TemplatePicker";
 import { ResumeForm } from "@/components/resume/ResumeForm";
 import { ResumePreview } from "@/components/resume/ResumePreview";
 import { apiFetch } from "@/lib/api";
 import { emptyContent, type ResumeContent, type ResumeRecord, type TemplateId } from "@/lib/resumeTypes";
+
+function draftKey(title: string, templateId: TemplateId, content: ResumeContent) {
+  return JSON.stringify({ title, templateId, content });
+}
 
 export function ResumeEditor() {
   const { id } = useParams<{ id: string }>();
@@ -13,9 +17,16 @@ export function ResumeEditor() {
   const [title, setTitle] = useState("");
   const [templateId, setTemplateId] = useState<TemplateId>("classic");
   const [content, setContent] = useState<ResumeContent>(emptyContent());
+  const [savedDraftKey, setSavedDraftKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+
+  const currentDraftKey = useMemo(
+    () => draftKey(title, templateId, content),
+    [title, templateId, content],
+  );
+  const isDirty = savedDraftKey !== "" && currentDraftKey !== savedDraftKey;
 
   useEffect(() => {
     if (!id) return;
@@ -34,6 +45,7 @@ export function ResumeEditor() {
         setTitle(data.title);
         setTemplateId(data.template_id);
         setContent(data.content);
+        setSavedDraftKey(draftKey(data.title, data.template_id, data.content));
       } catch {
         if (!cancelled) setError("Could not load resume.");
       } finally {
@@ -45,8 +57,8 @@ export function ResumeEditor() {
     };
   }, [id]);
 
-  const save = useCallback(async () => {
-    if (!id) return;
+  const save = useCallback(async (): Promise<boolean> => {
+    if (!id) return false;
     setSaving(true);
     setSaveMessage("");
     setError("");
@@ -62,15 +74,18 @@ export function ResumeEditor() {
       });
       if (!res.ok) {
         setError("Could not save resume.");
-        return;
+        return false;
       }
       const data = (await res.json()) as ResumeRecord;
       setTitle(data.title);
       setTemplateId(data.template_id);
       setContent(data.content);
+      setSavedDraftKey(draftKey(data.title, data.template_id, data.content));
       setSaveMessage("Saved.");
+      return true;
     } catch {
       setError("Could not save resume.");
+      return false;
     } finally {
       setSaving(false);
     }
@@ -81,6 +96,12 @@ export function ResumeEditor() {
     setExporting(true);
     setError("");
     try {
+      if (isDirty) {
+        const ok = await save();
+        if (!ok) {
+          return;
+        }
+      }
       const res = await apiFetch(`/resumes/${id}/export.pdf`);
       if (!res.ok) {
         setError("Could not export PDF.");
@@ -98,7 +119,7 @@ export function ResumeEditor() {
     } finally {
       setExporting(false);
     }
-  }, [id]);
+  }, [id, isDirty, save]);
 
   if (loading) {
     return <p className="text-muted-foreground">Loading…</p>;
@@ -127,11 +148,11 @@ export function ResumeEditor() {
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            disabled={exporting}
+            disabled={exporting || saving}
             onClick={() => void downloadPdf()}
             className="press rounded-xl border bg-card px-6 py-3 font-semibold shadow-brutal disabled:opacity-60"
           >
-            {exporting ? "Preparing…" : "Download PDF"}
+            {exporting ? "Preparing…" : isDirty ? "Save & download PDF" : "Download PDF"}
           </button>
           <button
             type="button"
@@ -143,6 +164,9 @@ export function ResumeEditor() {
           </button>
         </div>
       </div>
+      {isDirty && !saveMessage && (
+        <p className="mt-2 text-sm text-muted-foreground">You have unsaved changes.</p>
+      )}
       {saveMessage && <p className="mt-2 text-sm font-medium text-primary">{saveMessage}</p>}
       {error && (
         <p className="mt-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

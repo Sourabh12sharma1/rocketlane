@@ -35,6 +35,7 @@ def request_otp(db: Session, user: User) -> int:
 
 
 def verify_otp(db: Session, user: User, code: str) -> bool:
+    settings = get_settings()
     now = datetime.now(timezone.utc)
     challenge = (
         db.query(OtpChallenge)
@@ -46,7 +47,13 @@ def verify_otp(db: Session, user: User, code: str) -> bool:
         .order_by(OtpChallenge.created_at.desc())
         .first()
     )
-    if challenge is None or challenge.code_hash != _hash_code(code):
+    if challenge is None:
+        return False
+    if challenge.code_hash != _hash_code(code):
+        challenge.failed_attempts += 1
+        if challenge.failed_attempts >= settings.otp_max_attempts:
+            challenge.used_at = now
+        db.commit()
         return False
     challenge.used_at = now
     user.phone_verified = True

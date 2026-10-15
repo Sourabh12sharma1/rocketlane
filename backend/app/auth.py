@@ -63,3 +63,12 @@ def get_current_user(
             detail="User not found",
         )
     return user
+
+
+def require_phone_verified(user: User = Depends(get_current_user)) -> User:
+    if not user.phone_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Phone verification required",
+        )
+    return user

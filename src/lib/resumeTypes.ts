@@ -44,6 +44,8 @@ export type ResumeLanguage = {
   proficiency: string;
 };
 
+export type ResumeSkill = string | { name: string; level?: string };
+
 export type ResumeCustomSection = {
   title: string;
   body: string;
@@ -54,7 +56,7 @@ export type ResumeContent = {
   summary: string;
   experience: ResumeExperience[];
   education: ResumeEducation[];
-  skills: string[];
+  skills: ResumeSkill[];
   projects: ResumeProject[];
   links: ResumeLink[];
   certifications: ResumeCertification[];

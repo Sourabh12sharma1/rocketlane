@@ -38,6 +38,8 @@ export function Login() {
       } else {
         navigate("/app/verify-otp", { replace: true });
       }
+    } catch {
+      setError("Network error. Check your connection and try again.");
     } finally {
       setBusy(false);
     }

@@ -71,13 +71,14 @@ def test_otp_verify_flow(monkeypatch, caplog):
 
     caplog.set_level(logging.INFO)
     token = _token()
+    start = len(caplog.records)
     r = client.post(
         "/api/auth/otp/request", headers={"Authorization": f"Bearer {token}"}
     )
     assert r.status_code == 200
-    m = re.search(r"DEV OTP for .+: (\d{6})", caplog.text)
-    assert m, caplog.text
-    code = m.group(1)
+    from tests.helpers import _latest_otp_from_caplog
+
+    code = _latest_otp_from_caplog(caplog, start)
     r2 = client.post(
         "/api/auth/otp/verify",
         headers={"Authorization": f"Bearer {token}"},
@@ -85,3 +86,30 @@ def test_otp_verify_flow(monkeypatch, caplog):
     )
     assert r2.status_code == 200
     assert r2.json()["phone_verified"] is True
+
+
+def test_otp_verify_locks_after_max_failed_attempts(caplog):
+    import logging
+    import uuid
+
+    from tests.helpers import register_token
+
+    caplog.set_level(logging.INFO)
+    token = register_token(client, f"otp-lock-{uuid.uuid4()}@example.com")
+    r = client.post(
+        "/api/auth/otp/request", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert r.status_code == 200
+    for _ in range(5):
+        bad = client.post(
+            "/api/auth/otp/verify",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"code": "000000"},
+        )
+        assert bad.status_code == 400
+    locked = client.post(
+        "/api/auth/otp/verify",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"code": "000000"},
+    )
+    assert locked.status_code == 400

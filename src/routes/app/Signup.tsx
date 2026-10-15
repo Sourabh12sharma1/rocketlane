@@ -35,6 +35,8 @@ export function Signup() {
       const body = (await res.json()) as AuthResponse;
       setSession(body.access_token, body.user);
       navigate("/app/verify-otp", { replace: true });
+    } catch {
+      setError("Network error. Check your connection and try again.");
     } finally {
       setBusy(false);
     }

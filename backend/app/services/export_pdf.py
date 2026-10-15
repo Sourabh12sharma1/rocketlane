@@ -154,6 +154,19 @@ def _skills_html(content: ResumeContent) -> str:
     return f'<div class="skills">{pills}</div>'
 
 
+def _links_html(content: ResumeContent) -> str:
+    blocks: list[str] = []
+    for link in content.links:
+        if not link.url and not link.label:
+            continue
+        label = _e(link.label or link.url)
+        if link.url:
+            blocks.append(f'<div><a href="{_e(link.url)}">{label}</a></div>')
+        else:
+            blocks.append(f"<div>{label}</div>")
+    return "".join(blocks)
+
+
 def _projects_html(content: ResumeContent) -> str:
     blocks: list[str] = []
     for proj in content.projects:
@@ -225,6 +238,7 @@ def build_resume_html(template_id: TemplateId, content: ResumeContent | dict[str
         _section("Education", _education_html(model)),
         _section("Skills", _skills_html(model)),
         _section("Projects", _projects_html(model)),
+        _section("Links", _links_html(model)),
         _section("Certifications", _certifications_html(model)),
         _section("Languages", _languages_html(model)),
         _custom_html(model),
