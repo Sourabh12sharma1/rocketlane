@@ -26,6 +26,18 @@ def test_register_and_login():
     assert "access_token" in r2.json()
 
 
+def test_register_duplicate_email():
+    payload = {
+        "email": "dup@example.com",
+        "password": "secret123",
+        "phone": "+15559998888",
+    }
+    r1 = client.post("/api/auth/register", json=payload)
+    assert r1.status_code == 201
+    r2 = client.post("/api/auth/register", json=payload)
+    assert r2.status_code == 409
+
+
 def test_login_bad_password():
     client.post(
         "/api/auth/register",
