@@ -27,3 +27,16 @@ class AuthResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserPublic
+
+
+class OtpRequestResponse(BaseModel):
+    ok: bool
+    expires_in: int
+
+
+class OtpVerifyRequest(BaseModel):
+    code: str
+
+
+class OtpVerifyResponse(BaseModel):
+    phone_verified: bool

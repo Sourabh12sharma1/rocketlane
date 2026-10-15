@@ -51,3 +51,37 @@ def test_login_bad_password():
         "/api/auth/login", json={"email": "b@example.com", "password": "wrong"}
     )
     assert r.status_code == 401
+
+
+def _token():
+    r = client.post(
+        "/api/auth/register",
+        json={
+            "email": "otp@example.com",
+            "password": "secret123",
+            "phone": "+15557654321",
+        },
+    )
+    return r.json()["access_token"]
+
+
+def test_otp_verify_flow(monkeypatch, caplog):
+    import logging
+    import re
+
+    caplog.set_level(logging.INFO)
+    token = _token()
+    r = client.post(
+        "/api/auth/otp/request", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert r.status_code == 200
+    m = re.search(r"DEV OTP for .+: (\d{6})", caplog.text)
+    assert m, caplog.text
+    code = m.group(1)
+    r2 = client.post(
+        "/api/auth/otp/verify",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"code": code},
+    )
+    assert r2.status_code == 200
+    assert r2.json()["phone_verified"] is True
