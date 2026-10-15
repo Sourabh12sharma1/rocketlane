@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
-from app.routers import auth
+from app.routers import auth, resumes
 
 app = FastAPI(title="Rocketlane API")
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(resumes.router, prefix="/api/resumes", tags=["resumes"])
 settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
