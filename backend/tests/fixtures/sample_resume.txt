@@ -1,0 +1,28 @@
+Jane Doe
+jane.doe@example.com
++1 (555) 987-6543
+San Francisco, CA
+
+SUMMARY
+Experienced software engineer with eight years building web applications.
+
+EXPERIENCE
+Acme Corp | Senior Engineer | 2020 - Present
+- Led a team of five engineers
+- Shipped a major customer-facing feature
+
+EDUCATION
+MIT | BS Computer Science | 2012 - 2016
+
+SKILLS
+Python, FastAPI, PostgreSQL, React
+
+PROJECTS
+Resume Builder — Open-source resume tool for developers
+
+CERTIFICATIONS
+AWS Solutions Architect | Amazon | 2021
+
+LANGUAGES
+English — Native
+Spanish — Conversational

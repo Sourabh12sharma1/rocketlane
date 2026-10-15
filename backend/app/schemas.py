@@ -151,3 +151,8 @@ class ResumeOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ResumeImportResponse(BaseModel):
+    content: ResumeContent
+    warnings: list[str] = Field(default_factory=list)

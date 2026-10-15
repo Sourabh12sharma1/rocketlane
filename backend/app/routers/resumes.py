@@ -1,14 +1,22 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.config import Settings, get_settings
 from app.db import get_db
 from app.models import Resume, User
-from app.schemas import ResumeCreate, ResumeListItem, ResumeOut, ResumeUpdate
+from app.schemas import (
+    ResumeCreate,
+    ResumeImportResponse,
+    ResumeListItem,
+    ResumeOut,
+    ResumeUpdate,
+)
 from app.services.empty_content import empty_content
+from app.services.import_resume import import_from_inputs
 
 router = APIRouter()
 
@@ -54,6 +62,35 @@ def create_resume(
     db.commit()
     db.refresh(resume)
     return ResumeOut.model_validate(resume)
+
+
+@router.post("/import", response_model=ResumeImportResponse)
+async def import_resume(
+    user: User = Depends(get_current_user),
+    text: str | None = Form(default=None),
+    file: UploadFile | None = File(default=None),
+    settings: Settings = Depends(get_settings),
+):
+    has_text = text is not None and text.strip() != ""
+    file_bytes: bytes | None = None
+    if file is not None:
+        file_bytes = await file.read()
+        if len(file_bytes) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Empty file"
+            )
+        if len(file_bytes) > settings.max_upload_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="File too large",
+            )
+    if not has_text and file_bytes is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide text and/or file",
+        )
+    content, warnings = import_from_inputs(text if has_text else None, file_bytes)
+    return ResumeImportResponse(content=content, warnings=warnings)
 
 
 @router.get("/{resume_id}", response_model=ResumeOut)
