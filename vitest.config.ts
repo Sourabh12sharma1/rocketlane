@@ -4,5 +4,12 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   resolve: { alias: { "@": new URL("./src", import.meta.url).pathname } },
-  test: { environment: "jsdom", globals: true, include: ["tests/**/*.test.{ts,tsx}"] },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    include: ["tests/**/*.test.{ts,tsx}"],
+    pool: "forks",
+    fileParallelism: false,
+    poolOptions: { forks: { singleFork: true } },
+  },
 });
