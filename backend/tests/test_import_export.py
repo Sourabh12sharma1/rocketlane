@@ -82,6 +82,34 @@ def test_import_rejects_empty_file():
     assert r.status_code == 400
 
 
+def test_export_pdf_returns_pdf_bytes():
+    token = _register_token()
+    created = client.post(
+        "/api/resumes",
+        headers=_auth_headers(token),
+        json={"template_id": "classic", "title": "Export Me"},
+    )
+    assert created.status_code == 201
+    resume_id = created.json()["id"]
+
+    content = created.json()["content"]
+    content["contact"]["name"] = "Jane Doe"
+    content["summary"] = "Software engineer"
+    client.put(
+        f"/api/resumes/{resume_id}",
+        headers=_auth_headers(token),
+        json={"content": content},
+    )
+
+    r = client.get(
+        f"/api/resumes/{resume_id}/export.pdf",
+        headers=_auth_headers(token),
+    )
+    assert r.status_code == 200
+    assert "pdf" in r.headers.get("content-type", "").lower()
+    assert r.content[:4] == b"%PDF"
+
+
 def test_import_rejects_oversized_file():
     token = _register_token()
     small_limit = 512

@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
@@ -16,6 +17,7 @@ from app.schemas import (
     ResumeUpdate,
 )
 from app.services.empty_content import empty_content
+from app.services.export_pdf import render_resume_pdf
 from app.services.import_resume import import_from_inputs
 
 router = APIRouter()
@@ -91,6 +93,21 @@ async def import_resume(
         )
     content, warnings = import_from_inputs(text if has_text else None, file_bytes)
     return ResumeImportResponse(content=content, warnings=warnings)
+
+
+@router.get("/{resume_id}/export.pdf")
+def export_resume_pdf(
+    resume_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    resume = _get_owned_resume(db, user, resume_id)
+    pdf_bytes = render_resume_pdf(resume.template_id, resume.content)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="resume.pdf"'},
+    )
 
 
 @router.get("/{resume_id}", response_model=ResumeOut)
