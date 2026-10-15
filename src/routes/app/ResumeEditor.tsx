@@ -1,0 +1,196 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { TemplatePicker } from "@/components/resume/TemplatePicker";
+import { ResumeForm } from "@/components/resume/ResumeForm";
+import { ResumePreview } from "@/components/resume/ResumePreview";
+import { apiFetch } from "@/lib/api";
+import { emptyContent, type ResumeContent, type ResumeRecord, type TemplateId } from "@/lib/resumeTypes";
+
+function draftKey(title: string, templateId: TemplateId, content: ResumeContent) {
+  return JSON.stringify({ title, templateId, content });
+}
+
+export function ResumeEditor() {
+  const { id } = useParams<{ id: string }>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [title, setTitle] = useState("");
+  const [templateId, setTemplateId] = useState<TemplateId>("classic");
+  const [content, setContent] = useState<ResumeContent>(emptyContent());
+  const [savedDraftKey, setSavedDraftKey] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  const currentDraftKey = useMemo(
+    () => draftKey(title, templateId, content),
+    [title, templateId, content],
+  );
+  const isDirty = savedDraftKey !== "" && currentDraftKey !== savedDraftKey;
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await apiFetch(`/resumes/${id}`);
+        if (!res.ok) {
+          if (!cancelled) setError("Could not load resume.");
+          return;
+        }
+        const data = (await res.json()) as ResumeRecord;
+        if (cancelled) return;
+        setTitle(data.title);
+        setTemplateId(data.template_id);
+        setContent(data.content);
+        setSavedDraftKey(draftKey(data.title, data.template_id, data.content));
+      } catch {
+        if (!cancelled) setError("Could not load resume.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const save = useCallback(async (): Promise<boolean> => {
+    if (!id) return false;
+    setSaving(true);
+    setSaveMessage("");
+    setError("");
+    try {
+      const res = await apiFetch(`/resumes/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          template_id: templateId,
+          content,
+        }),
+      });
+      if (!res.ok) {
+        setError("Could not save resume.");
+        return false;
+      }
+      const data = (await res.json()) as ResumeRecord;
+      setTitle(data.title);
+      setTemplateId(data.template_id);
+      setContent(data.content);
+      setSavedDraftKey(draftKey(data.title, data.template_id, data.content));
+      setSaveMessage("Saved.");
+      return true;
+    } catch {
+      setError("Could not save resume.");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [id, title, templateId, content]);
+
+  const downloadPdf = useCallback(async () => {
+    if (!id) return;
+    setExporting(true);
+    setError("");
+    try {
+      if (isDirty) {
+        const ok = await save();
+        if (!ok) {
+          return;
+        }
+      }
+      const res = await apiFetch(`/resumes/${id}/export.pdf`);
+      if (!res.ok) {
+        setError("Could not export PDF.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "resume.pdf";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Could not export PDF.");
+    } finally {
+      setExporting(false);
+    }
+  }, [id, isDirty, save]);
+
+  if (loading) {
+    return <p className="text-muted-foreground">Loading…</p>;
+  }
+
+  if (error && !title) {
+    return (
+      <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        {error}
+      </p>
+    );
+  }
+
+  return (
+    <div>
+      <Link to="/app/resume" className="text-sm font-medium text-muted-foreground hover:underline">
+        ← Back to resumes
+      </Link>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+        <input
+          aria-label="Resume title"
+          className="min-w-[12rem] flex-1 rounded-xl border bg-card px-4 py-2 text-2xl font-semibold shadow-brutal"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={exporting || saving}
+            onClick={() => void downloadPdf()}
+            className="press rounded-xl border bg-card px-6 py-3 font-semibold shadow-brutal disabled:opacity-60"
+          >
+            {exporting ? "Preparing…" : isDirty ? "Save & download PDF" : "Download PDF"}
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void save()}
+            className="press rounded-xl border bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-brutal disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
+      {isDirty && !saveMessage && (
+        <p className="mt-2 text-sm text-muted-foreground">You have unsaved changes.</p>
+      )}
+      {saveMessage && <p className="mt-2 text-sm font-medium text-primary">{saveMessage}</p>}
+      {error && (
+        <p className="mt-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Template</h2>
+        <div className="mt-3">
+          <TemplatePicker value={templateId} onChange={setTemplateId} />
+        </div>
+      </div>
+
+      <div className="mt-10 grid gap-10 lg:grid-cols-2">
+        <div>
+          <h2 className="mb-4 text-lg font-semibold">Edit</h2>
+          <ResumeForm content={content} onChange={setContent} />
+        </div>
+        <div className="lg:sticky lg:top-24 lg:self-start">
+          <h2 className="mb-4 text-lg font-semibold">Preview</h2>
+          <ResumePreview templateId={templateId} content={content} />
+        </div>
+      </div>
+    </div>
+  );
+}

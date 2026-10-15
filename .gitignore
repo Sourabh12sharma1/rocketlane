@@ -3,3 +3,7 @@ dist
 .DS_Store
 *.local
 .vite
+.worktrees
+backend/.venv/
+backend/.env
+__pycache__/
